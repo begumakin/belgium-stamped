@@ -9,7 +9,6 @@ Stamp every Belgian municipality you've been to. All 565 municipalities as of 1 
 - **Download backup** / **Restore** move your map between devices.
 - On a phone, use *Add to Home Screen* to get it as an app.
 
-There's also a printable A2 version (`belgie-gemeenten-A2.pdf`). Page 1 is a blank boundary map for colouring in, page 2 is a named index.
 
 ## Data
 
