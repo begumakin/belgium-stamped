@@ -128,9 +128,13 @@ body.viewing .mine,body.viewing #cseg,body.viewing #cdet,body.viewing #cmore{dis
   .btn{padding:10px 14px;font-size:14px}
   .results div,.list div{padding:11px 2px;font-size:15px}
   .pr{font-size:14px}
-  body.searching aside{top:var(--vvtop,0px);bottom:auto;height:var(--vvh,100dvh);transform:none!important;transition:none;border-radius:0;box-shadow:none}
+  body.searching aside{top:var(--vvtop,0px);bottom:auto;height:auto;max-height:var(--vvh,100dvh);transform:none!important;transition:none;border-radius:0 0 14px 14px;box-shadow:0 4px 18px rgba(0,0,0,.10)}
+  body.searching.has-q aside{height:var(--vvh,100dvh);border-radius:0;box-shadow:none}
+  body.searching.has-q .mapwrap{visibility:hidden}
+  body.searching .filters,body.searching .views{display:none}
   body.searching .head,body.searching .scroll>*:not(#secq){display:none!important}
-  body.searching .scroll{overflow:auto!important;padding-top:12px}
+  body.searching .scroll{overflow:auto!important;padding-top:12px;padding-bottom:12px}
+  body.searching:not(.has-q) #res{display:none}
   body.searching #secq{position:sticky;top:0;background:#fff;padding-bottom:4px;z-index:2}
   body.searching .qcancel{display:block}
   .sel-card.on{display:grid;grid-template-columns:1fr;align-items:center;column-gap:12px;padding:12px 14px}
@@ -294,14 +298,14 @@ const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
 D.munis.forEach(m=>m.k=norm(m.n));
 const AL=(D.al||[]).map(([n,ids])=>({n,k:norm(n),ids}));
 const mark=id=>st(id)=='v'?' ✓':st(id)=='w'?' ☆':'';
-$('q').oninput=e=>{const q=norm(e.target.value.trim());if(!q){$('res').innerHTML='';return}
+$('q').oninput=e=>{const q=norm(e.target.value.trim());document.body.classList.toggle('has-q',!!q);if(!q){$('res').innerHTML='';return}
   const pre=(k)=>k.startsWith(q)||k.includes(' '+q)||k.includes('-'+q);
   const r=D.munis.filter(m=>m.k.includes(q)).sort((a,b)=>pre(b.k)-pre(a.k)).slice(0,8).map(m=>({id:m.id,html:`<span>${esc(m.n)}${mark(m.id)}</span><small>${m.p}</small>`}));
   if(r.length<8){const seen=new Set(r.map(x=>x.id));
     const a=AL.filter(x=>x.k.includes(q)).sort((x,y)=>pre(y.k)-pre(x.k)||x.n.length-y.n.length);
     for(const x of a){for(const id of x.ids){if(r.length>=8)break;const m=byId[id];r.push({id,html:`<span>${esc(x.n)} <small>· in ${esc(m.n)}${mark(id)}</small></span><small>${m.p}</small>`})}if(r.length>=8)break}}
   $('res').innerHTML=r.map(x=>`<div data-g="${x.id}">${x.html}</div>`).join('')||'<p class="empty">No match.</p>'};
-$('res').onclick=e=>{const r=e.target.closest('[data-g]');if(r){if(document.body.classList.contains('searching'))document.body.classList.remove('searching');goTo(r.dataset.g);$('q').value='';$('res').innerHTML='';keepSearch=false;setTimeout(setPeek,50)}};
+$('res').onclick=e=>{const r=e.target.closest('[data-g]');if(r){if(document.body.classList.contains('searching'))document.body.classList.remove('searching','has-q');goTo(r.dataset.g);$('q').value='';$('res').innerHTML='';keepSearch=false;setTimeout(setPeek,50)}};
 
 // copy
 $('copy').onclick=async()=>{const all=Object.keys(visits).filter(id=>byId[id]);const ids=all.filter(id=>st(id)=='v');const wl=all.filter(id=>st(id)=='w').map(id=>byId[id].n).sort();const txt=ids.map(id=>byId[id]).sort((a,b)=>a.p.localeCompare(b.p)||a.n.localeCompare(b.n)).map(m=>`${m.n} (${m.p})${visits[m.id].d?' – '+fmt(visits[m.id].d):''}${visits[m.id].t?' – '+visits[m.id].t:''}`).join('\n');
@@ -330,7 +334,7 @@ const vv=window.visualViewport;let keepSearch=false;
 function syncVV(){if(!vv)return;const r=document.documentElement.style;r.setProperty('--vvh',vv.height+'px');r.setProperty('--vvtop',vv.offsetTop+'px')}
 if(vv){vv.addEventListener('resize',syncVV);vv.addEventListener('scroll',syncVV)}
 function enterSearch(){if(!mq.matches)return;syncVV();document.body.classList.add('searching');aside.classList.add('open');requestAnimationFrame(()=>{window.scrollTo(0,0);syncVV()})}
-function exitSearch(){document.body.classList.remove('searching');window.scrollTo(0,0);sheet(false);setPeek()}
+function exitSearch(){document.body.classList.remove('searching','has-q');window.scrollTo(0,0);sheet(false);setPeek()}
 $('q').addEventListener('focus',()=>{if(mq.matches)enterSearch();else sheet(true)});
 $('q').addEventListener('blur',()=>setTimeout(()=>{if(keepSearch){keepSearch=false;return}if(!$('q').value.trim()&&document.body.classList.contains('searching'))exitSearch()},250));
 $('res').addEventListener('pointerdown',()=>{keepSearch=true});
