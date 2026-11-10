@@ -34,7 +34,9 @@ svg{width:100%;height:100%;display:block;user-select:none}
 .seg button:first-child{border-left:0}
 .seg button.on{background:#111;color:#fff}
 .lh{display:flex;justify-content:space-between;align-items:baseline}
-.m.sel{stroke-width:1.6}
+.m.sel{stroke-width:2.4;fill:#ececec}
+.m.sel.v{fill:#1b1b1b}
+.m.sel.w{fill:url(#hatch)}
 .prov{fill:none;stroke:#000;stroke-width:.9;vector-effect:non-scaling-stroke;pointer-events:none}
 .out{fill:none;stroke:#000;stroke-width:1.5;vector-effect:non-scaling-stroke;pointer-events:none}
 .tip{position:absolute;pointer-events:none;background:#111;color:#fff;font-size:12px;padding:5px 8px;border-radius:4px;white-space:nowrap;opacity:0;transition:opacity .1s;transform:translate(-50%,-130%)}
@@ -89,6 +91,8 @@ input:focus{outline:none;border-color:#111}
 .foot{display:flex;gap:8px;flex-wrap:wrap}
 .toast{font-size:12px;color:var(--mute);margin-top:8px;min-height:14px}
 .handle{display:none}
+.qrow{display:flex;gap:10px;align-items:center}
+.qcancel{display:none;font:inherit;font-size:15px;background:none;border:0;color:var(--ink);padding:8px 2px;cursor:pointer}
 .note{font-size:12px;color:var(--mute);line-height:1.5;margin:12px 0 0}
 .note a{color:inherit}
 .credit{margin-top:22px}
@@ -124,6 +128,11 @@ body.viewing .mine,body.viewing #cseg,body.viewing #cdet,body.viewing #cmore{dis
   .btn{padding:10px 14px;font-size:14px}
   .results div,.list div{padding:11px 2px;font-size:15px}
   .pr{font-size:14px}
+  body.searching aside{top:var(--vvtop,0px);bottom:auto;height:var(--vvh,100dvh);transform:none!important;transition:none;border-radius:0;box-shadow:none}
+  body.searching .head,body.searching .scroll>*:not(#secq){display:none!important}
+  body.searching .scroll{overflow:auto!important;padding-top:12px}
+  body.searching #secq{position:sticky;top:0;background:#fff;padding-bottom:4px;z-index:2}
+  body.searching .qcancel{display:block}
   .sel-card.on{display:grid;grid-template-columns:1fr;align-items:center;column-gap:12px;padding:12px 14px}
   .sel-card .pv{margin:2px 0 0}
   .seg{grid-column:1;margin-top:10px}
@@ -157,7 +166,7 @@ body.viewing .mine,body.viewing #cseg,body.viewing #cdet,body.viewing #cmore{dis
     </div>
     <div class="scroll">
       <div class="sec" id="secq">
-        <input type="search" id="q" placeholder="Search a town or village" autocomplete="off">
+        <div class="qrow"><input type="search" id="q" placeholder="Search a town or village" autocomplete="off" enterkeyhint="search"><button class="qcancel" id="qcancel" type="button">Cancel</button></div>
         <div class="results" id="res"></div>
       </div>
       <div class="sec" id="secc">
@@ -277,7 +286,7 @@ function render(){
 const esc=s=>s.replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const fmt=d=>{const [y,m,dd]=d.split('-');return dd+'.'+m+'.'+y};
 $('list').onclick=$('wlist').onclick=e=>{const r=e.target.closest('[data-g]');if(r)goTo(r.dataset.g)};
-function goTo(id){sheet(false);document.activeElement&&document.activeElement.blur();select(id);let b=bboxOf(id);const cx=(b[0][0]+b[1][0])/2,cy=(b[0][1]+b[1][1])/2,r=Math.max(70,b[1][0]-b[0][0],b[1][1]-b[0][1])*1.4;zoomTo([[cx-r,cy-r],[cx+r,cy+r]],1)}
+function goTo(id){sheet(false);document.activeElement&&document.activeElement.blur();select(id);let b=bboxOf(id);const cx=(b[0][0]+b[1][0])/2,cy=(b[0][1]+b[1][1])/2,r=Math.max(70,b[1][0]-b[0][0],b[1][1]-b[0][1])*1.4;let ext=0;if(typeof mq!='undefined'&&mq.matches){const peek=parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--peek'))||170;ext=2*r*peek/Math.max(200,innerHeight-peek)}zoomTo([[cx-r,cy-r],[cx+r,cy+r+ext]],1)}
 function bboxOf(id){const bb=els[id].getBBox();return [[bb.x,bb.y],[bb.x+bb.width,bb.y+bb.height]]}
 
 // search
@@ -292,7 +301,7 @@ $('q').oninput=e=>{const q=norm(e.target.value.trim());if(!q){$('res').innerHTML
     const a=AL.filter(x=>x.k.includes(q)).sort((x,y)=>pre(y.k)-pre(x.k)||x.n.length-y.n.length);
     for(const x of a){for(const id of x.ids){if(r.length>=8)break;const m=byId[id];r.push({id,html:`<span>${esc(x.n)} <small>· in ${esc(m.n)}${mark(id)}</small></span><small>${m.p}</small>`})}if(r.length>=8)break}}
   $('res').innerHTML=r.map(x=>`<div data-g="${x.id}">${x.html}</div>`).join('')||'<p class="empty">No match.</p>'};
-$('res').onclick=e=>{const r=e.target.closest('[data-g]');if(r){goTo(r.dataset.g);$('q').value='';$('res').innerHTML=''}};
+$('res').onclick=e=>{const r=e.target.closest('[data-g]');if(r){if(document.body.classList.contains('searching'))document.body.classList.remove('searching');goTo(r.dataset.g);$('q').value='';$('res').innerHTML='';keepSearch=false;setTimeout(setPeek,50)}};
 
 // copy
 $('copy').onclick=async()=>{const all=Object.keys(visits).filter(id=>byId[id]);const ids=all.filter(id=>st(id)=='v');const wl=all.filter(id=>st(id)=='w').map(id=>byId[id].n).sort();const txt=ids.map(id=>byId[id]).sort((a,b)=>a.p.localeCompare(b.p)||a.n.localeCompare(b.n)).map(m=>`${m.n} (${m.p})${visits[m.id].d?' – '+fmt(visits[m.id].d):''}${visits[m.id].t?' – '+visits[m.id].t:''}`).join('\n');
@@ -316,7 +325,18 @@ $('head').addEventListener('pointermove',e=>{if(!sd)return;const base=sd.open?0:
 $('head').addEventListener('pointerup',e=>{if(!sd)return;const dy=e.clientY-sd.y;aside.classList.remove('dragging');aside.style.transform='';
   if(Math.abs(dy)<6)sheet(!sd.open);else sheet(dy<0);sd=null});
 $('head').addEventListener('pointercancel',()=>{if(sd){aside.classList.remove('dragging');aside.style.transform='';sd=null}});
-$('q').addEventListener('focus',()=>sheet(true));
+// mobile search: full-height view that sits right above the keyboard
+const vv=window.visualViewport;let keepSearch=false;
+function syncVV(){if(!vv)return;const r=document.documentElement.style;r.setProperty('--vvh',vv.height+'px');r.setProperty('--vvtop',vv.offsetTop+'px')}
+if(vv){vv.addEventListener('resize',syncVV);vv.addEventListener('scroll',syncVV)}
+function enterSearch(){if(!mq.matches)return;syncVV();document.body.classList.add('searching');aside.classList.add('open');requestAnimationFrame(()=>{window.scrollTo(0,0);syncVV()})}
+function exitSearch(){document.body.classList.remove('searching');window.scrollTo(0,0);sheet(false);setPeek()}
+$('q').addEventListener('focus',()=>{if(mq.matches)enterSearch();else sheet(true)});
+$('q').addEventListener('blur',()=>setTimeout(()=>{if(keepSearch){keepSearch=false;return}if(!$('q').value.trim()&&document.body.classList.contains('searching'))exitSearch()},250));
+$('res').addEventListener('pointerdown',()=>{keepSearch=true});
+$('qcancel').addEventListener('pointerdown',e=>{e.preventDefault()});
+$('qcancel').onclick=()=>{keepSearch=false;$('q').value='';$('res').innerHTML='';$('q').blur();exitSearch()};
+$('q').addEventListener('keydown',e=>{if(e.key==='Enter'){const f=$('res').querySelector('[data-g]');if(f){keepSearch=true;f.click()}else $('q').blur()}});
 wrap.addEventListener('pointerdown',()=>{if(aside.classList.contains('open')){sheet(false);document.activeElement&&document.activeElement.blur()}},true);
 
 // share link: bitmask of visited ids in the URL hash
